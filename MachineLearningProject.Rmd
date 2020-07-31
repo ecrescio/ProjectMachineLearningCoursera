@@ -1,0 +1,68 @@
+---
+title: "MachineLProject"
+author: "Elisabetta Crescio"
+date: "30/7/2020"
+output: html_document
+---
+## Load libraries
+
+```{r }
+library(caret)
+library(ggplot2)
+library(dplyr)
+library(e1071)
+library(rattle)
+```
+
+## Data and cleaning
+We select the variables of interest, we drop the variables that have only NA values and choose all the others. We select the same variables for training and testing sets. 
+
+```{r}
+training<-read.csv("pml-training.csv")
+testing<-read.csv("pml-testing.csv")
+testing[is.na(testing)]<-0
+training[is.na(training)]<-0
+test_data<-testing %>% select("roll_belt","roll_arm","roll_dumbbell","roll_forearm","pitch_belt","pitch_arm","pitch_forearm","pitch_dumbbell","yaw_belt","yaw_arm","yaw_forearm","yaw_dumbbell","gyros_belt_x","gyros_belt_y","gyros_belt_z","gyros_forearm_x","gyros_forearm_y","gyros_forearm_z","gyros_dumbbell_x","gyros_dumbbell_y","gyros_dumbbell_z" ,"accel_belt_x","accel_belt_y","accel_belt_z","accel_arm_x","accel_arm_y","accel_arm_z","accel_forearm_x","accel_forearm_y","accel_forearm_z","accel_dumbbell_x","accel_dumbbell_y","accel_dumbbell_z","magnet_belt_x","magnet_belt_y","magnet_belt_z","magnet_arm_x","magnet_arm_y","magnet_arm_z","magnet_forearm_x","magnet_forearm_y","magnet_forearm_z","magnet_dumbbell_x","magnet_dumbbell_y","magnet_dumbbell_z","total_accel_belt","total_accel_forearm","total_accel_dumbbell")
+train_data<-training %>% select("classe","roll_belt","roll_arm","roll_dumbbell","roll_forearm","pitch_belt","pitch_arm","pitch_forearm","pitch_dumbbell","yaw_belt","yaw_arm","yaw_forearm","yaw_dumbbell","gyros_belt_x","gyros_belt_y","gyros_belt_z","gyros_forearm_x","gyros_forearm_y","gyros_forearm_z","accel_dumbbell_x","accel_dumbbell_y","accel_dumbbell_z","gyros_dumbbell_x","gyros_dumbbell_y","gyros_dumbbell_z","accel_belt_x","accel_belt_y","accel_belt_z","accel_arm_x","accel_arm_y","accel_arm_z","accel_forearm_x","accel_forearm_y","accel_forearm_z","magnet_belt_x","magnet_belt_y","magnet_belt_z","magnet_arm_x","magnet_arm_y","magnet_arm_z","magnet_forearm_x","magnet_forearm_y","magnet_forearm_z","magnet_dumbbell_x","magnet_dumbbell_y","magnet_dumbbell_z","total_accel_belt","total_accel_forearm","total_accel_dumbbell")
+```
+## Cross validation
+We decide to do cross validation to estimate the accuracy of the model on 10 groups, but we only repeat cross validation once:
+
+```{r}
+train_control <- trainControl(method="cv", number=10)
+```
+## Model
+We decide to use an simple classification tree from caret, using all the variables as explaining variables:
+```{r}
+hiperparametros <- data.frame(parameter = "none")
+model <- train(classe~., data=train_data, trControl=train_control, method="rpart")
+```
+The results of the model are the following:
+```{r }
+print(model$results)
+```
+The accuracy is not very good. From the plot below we can see that the method does not distinguish the class D.
+```{r }
+model
+fancyRpartPlot(model$finalModel)
+```
+
+
+
+## Prediction
+We now predict the result for the 20 observables of test data. Each prediction consists in the probability that a variable belongs to a class. 
+```{r}
+predict<- predict(model, newdata=test_data, type="prob")
+predict
+```
+We try to use another model, as for example the boosting method "gbm":
+```{r results="hide"}
+hiperparametros <- data.frame(parameter = "none")
+model2 <- train(classe~., data=train_data, trControl=train_control, method="gbm")
+```
+In this case the accuracy is much higher, but we could have introduced overfitting problems.
+```{r }
+model2$results
+predict<- predict(model2, newdata=test_data, type="prob")
+predict
+```
